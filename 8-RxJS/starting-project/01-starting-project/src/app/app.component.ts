@@ -1,0 +1,72 @@
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { interval, map, Observable } from 'rxjs';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  templateUrl: './app.component.html',
+})
+export class AppComponent implements OnInit {
+  clickCount = signal(0);
+  clickCount$ = toObservable(this.clickCount);
+  interval$ = interval(1000);
+  intervalSignal = toSignal(this.interval$, { initialValue: 0 });
+  // interval = signal(0);
+  // doubleInterval = computed(() => this.interval() * 2);
+  customInterval$ = new Observable((subsciber) => {
+    let timesExcuted = 0;
+    const intervalId = setInterval(() => {
+      if (timesExcuted > 3) {
+        clearInterval(intervalId);
+        subsciber.complete();
+        return;
+      }
+      console.log('Emitting new value....');
+      subsciber.next({ message: 'New value' });
+      timesExcuted++;
+    }, 2000);
+  });
+  private destroyRef = inject(DestroyRef);
+
+  constructor() {
+    // effect(() => {
+    //   console.log('Clicked button ' + this.clickCount() + ' times.');
+    // });
+  }
+  ngOnInit(): void {
+    // setInterval(() => {
+    //   this.interval.update((prevInterval) => prevInterval + 1);
+    // }, 1000);
+    // const subscription = interval(1000)
+    //   .pipe(map((val) => val * 2))
+    //   .subscribe({
+    //     next: (val) => console.log(val),
+    //   });
+    // this.destroyRef.onDestroy(() => {
+    //   subscription.unsubscribe();
+    // });
+    this.customInterval$.subscribe({
+      next: (val) => console.log(val),
+      complete: () => console.log('COMPLETED'),
+    });
+    const subscription = this.clickCount$.subscribe({
+      next: (val) =>
+        console.log('Clicked button ' + this.clickCount() + ' times.'),
+    });
+
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
+
+  onClick() {
+    this.clickCount.update((prevCout) => prevCout + 1);
+  }
+}
